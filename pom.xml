@@ -36,6 +36,10 @@
         <version.org.wildfly.checkstyle>1.0.4.Final</version.org.wildfly.checkstyle>
 
         <openssl.path></openssl.path>
+        <cmake.generator>Unix Makefiles</cmake.generator>
+        <make.exe>make</make.exe>
+        <native.dir>${project.basedir}${file.separator}libwfssl</native.dir>
+        <native.binary.name></native.binary.name>
 
         <!-- Test properties -->
         <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
@@ -108,7 +112,7 @@
                         <org.wildfly.openssl.test.host>${org.wildfly.openssl.test.host}</org.wildfly.openssl.test.host>
                         <org.wildfly.openssl.test.port>${org.wildfly.openssl.test.port}</org.wildfly.openssl.test.port>
                     </systemProperties>
-                    <argLine>-Djava.library.path=${project.basedir}/libwfssl</argLine>
+                   <!-- <argLine>-Djava.library.path=${project.basedir}/libwfssl</argLine> -->
                 </configuration>
             </plugin>
         </plugins>
@@ -118,12 +122,125 @@
         <profile>
             <id>mac</id>
             <activation>
-                <os><family>mac</family></os>
+                <os>
+                    <family>mac</family>
+                </os>
             </activation>
             <properties>
                 <openssl.path>/usr/local/opt/openssl/lib</openssl.path>
+                <native.binary.name>libwfssl.dylib</native.binary.name>
             </properties>
 
+        </profile>
+        <profile>
+            <id>linux</id>
+            <activation>
+                <os>
+                    <name>Linux</name>
+                </os>
+            </activation>
+            <properties>
+                <native.binary.name>libwfssl.so</native.binary.name>
+            </properties>
+        </profile>
+        <profile>
+            <id>windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <!-- with cygwin -->
+                <cmake.generator>Unix Makefiles</cmake.generator>
+                <!-- with MinGW -->
+                <!-- <cmake.generator>MinGW Makefiles</cmake.generator> -->
+                <!-- with MSYS -->
+                <!-- <cmake.generator>MSYS Makefiles</cmake.generator> -->
+                <native.binary.name>wfssl.dll</native.binary.name>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>all</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-clean-plugin</artifactId>
+                        <configuration>
+                            <filesets>
+                                <fileset>
+                                    <directory>libwfssl</directory>
+                                    <excludes>
+                                        <exclude>include/**</exclude>
+                                        <exclude>src/**</exclude>
+                                        <exclude>**/CMakeLists.txt</exclude>
+                                    </excludes>
+                                </fileset>
+                            </filesets>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>com.googlecode.cmake-maven-project</groupId>
+                        <artifactId>cmake-maven-plugin</artifactId>
+                        <version>3.4.1-b2</version>
+                        <executions>
+                            <execution>
+                                <id>cmake-generate</id>
+                                <phase>compile</phase>
+                                <goals>
+                                    <goal>generate</goal>
+                                </goals>
+                                <configuration>
+                                    <sourcePath>${native.dir}</sourcePath>
+                                    <targetPath>${native.dir}</targetPath>
+                                    <generator>${cmake.generator}</generator>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>make</id>
+                                <phase>compile</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${make.exe}</executable>
+                                    <workingDirectory>${native.dir}</workingDirectory>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>copy-native</id>
+                                <phase>compile</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.basedir}/target/classes</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>${native.dir}</directory>
+                                            <includes>
+                                                <include>${native.binary.name}</include>
+                                            </includes>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>
