@@ -40,6 +40,7 @@ class Identification {
                 // First, identify the operating system.
                 boolean knownOs = true;
                 String osName;
+                String altOsName = null;
                 // let the user override it.
                 osName = System.getProperty("jboss.modules.os-name");
                 if (osName == null) {
@@ -54,6 +55,8 @@ class Identification {
                             Matcher m = RHEL_PATTERN.matcher(sysVersion);
                             if (m.matches()) {
                                 osName = m.group(1); // el6, el7, or el8
+                                // Also add linux to the known CPU's
+                                altOsName = "linux";
                             } else {
                                 osName = "linux";
                             }
@@ -268,9 +271,12 @@ class Identification {
                 final int cpuCount = cpuNames.size();
                 String[] searchPaths = new String[cpuCount];
                 if (knownOs && knownCpu) {
-                    for (int i = 0; i < cpuCount; i++) {
+                    for (int i = 0,pos = 0; i < cpuCount; i++) {
                         final String name = cpuNames.get(i);
-                        searchPaths[i] = osName + "-" + name;
+                        searchPaths[pos++] = osName + "-" + name;
+                        if (altOsName != null) {
+                            searchPaths[pos++] = altOsName + "-" + name;
+                        }
                     }
                 } else {
                     searchPaths = new String[0];
